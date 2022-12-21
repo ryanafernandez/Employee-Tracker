@@ -1,5 +1,7 @@
-function viewAllEmployees() {
-    console.log("viewing all employees");
+const cTable = require('console.table');
+
+function viewAllEmployees(data) {
+    console.log(data);
 }
 
 function addEmployee() {
