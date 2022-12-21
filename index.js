@@ -1,22 +1,17 @@
 const inquirer = require('inquirer');
 require('console.table');
 const connection = require('./config/connection');
+const Queries = require('./lib/Queries');
+const { menuPrompt, addEmployeePrompt, addRolePrompt, addDeptPrompt } = require('./src/questions');
 
-const { menuPrompt, addEmployeePrompt, addRolePrompt, updateRolePrompt1, updateRolePrompt2, addDeptPrompt } = require('./src/questions');
-
-// Presents Title Screen and User Menu
-async function init() {
-    // Present title screen
-    console.log("Presenting menu screen");
-    mainMenu();
-}
-                
+const sql = new Queries();
+  
 // Runs mainMenu prompt and calls the corresponding function based on user choice
 async function mainMenu() {
     await inquirer.prompt(menuPrompt).then((answers) => {
         switch(answers.menuPrompt) {
             case 'View All Employees':
-                connection.promise().query('SELECT * FROM employee')
+                connection.promise().query(sql.viewAllEmployees)
                     .then( ([rows, fields]) => {
                         console.log('\n\n');
                         console.table(rows);
@@ -27,7 +22,7 @@ async function mainMenu() {
                 addEmployee();
                 break;
             case 'View All Roles':
-                connection.promise().query('SELECT * FROM role')
+                connection.promise().query(sql.viewAllRoles)
                     .then( ([rows, fields]) => {
                         console.log('\n\n');
                         console.table(rows);
@@ -41,7 +36,7 @@ async function mainMenu() {
                 updateEmployeeRole();
                 break;
             case 'View All Departments':
-                connection.promise().query('SELECT * FROM department')
+                connection.promise().query(sql.viewAllDepartments)
                     .then( ([rows, fields]) => {
                         console.log('\n\n');
                         console.table(rows);
@@ -65,9 +60,9 @@ async function mainMenu() {
 
 async function addEmployee() {
     await inquirer.prompt(addEmployeePrompt).then((answers) => {
-        const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?, ?, ?, ?)`;
         const params = [ answers.first_name, answers.last_name, answers.role_id, answers.manager_id ];
-        connection.promise().query(sql, params, (err, result) => {
+
+        connection.promise().query(sql.addEmployee, params, (err, result) => {
             if (err) {
                 console.log(err);
             }
@@ -82,6 +77,7 @@ async function addRole() {
         let title = answers.title;
         let salary = answers.salary;
         let department_id;
+
         switch (answers.department) {
             case 'Sales':
                 department_id = 1;
@@ -96,9 +92,9 @@ async function addRole() {
                 department_id = 1;
         }
 
-        const sql = `INSERT INTO role (title, salary, department_id) VALUES(?, ?, ?)`;
         const params = [ title, salary, department_id];
-        connection.promise().query(sql, params, (err, result) => {
+
+        connection.promise().query(sql.addRole, params, (err, result) => {
             if (err) {
                 console.log(err);
             }
@@ -110,9 +106,9 @@ async function addRole() {
 
 async function addDepartment() {
     await inquirer.prompt(addDeptPrompt).then((answers) => {
-        const sql = `INSERT INTO department (name) VALUES(?)`;
         const params = answers.name;
-        connection.promise().query(sql, params, (err, result) => {
+        
+        connection.promise().query(sql.addDepartment, params, (err, result) => {
             if (err) {
                 console.log(err);
             }
@@ -126,12 +122,8 @@ async function updateEmployeeRole() {
     const names = [];
     const roles = [];
 
-    const sqlNames = `SELECT id, CONCAT(first_name, \' \', last_name) AS name FROM employee`;
-    const sqlRoles = `SELECT id, title FROM role`;
-    const sqlUpdate = `UPDATE employee SET role_id = ? WHERE id = ?`;
-
     // Run sqlNames query to pull all employee names and store into names array
-    connection.promise().query(sqlNames)
+    connection.promise().query(sql.getNames)
     .then( ([rows, fields]) => {
         rows.forEach(row => {
             names.push(row.name);
@@ -149,7 +141,7 @@ async function updateEmployeeRole() {
                 const id = names.findIndex(element => element == employee.name) + 1;
 
                 // Run sqlRoles query to pull all roles and store into roles array
-                connection.promise().query(sqlRoles)
+                connection.promise().query(sql.getRoles)
                 .then( ([rows, fields]) => {
                     rows.forEach(row => {
                         roles.push(row.title);
@@ -167,7 +159,7 @@ async function updateEmployeeRole() {
                         const params = [ roleId, id ];
 
                         // Run sqlUpdate query to update the employee table
-                        connection.promise().query(sqlUpdate, params, (err, result) => {
+                        connection.promise().query(sql.updateRole, params, (err, result) => {
                             if (err) {
                                 console.log(err);
                             }
@@ -182,4 +174,4 @@ async function updateEmployeeRole() {
     });
 }
 
-init();
+mainMenu();
