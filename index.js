@@ -2,32 +2,23 @@ const inquirer = require('inquirer');
 require('console.table');
 const connection = require('./config/connection');
 const Queries = require('./lib/Queries');
-const { menuPrompt, addEmployeePrompt, addRolePrompt, addDeptPrompt } = require('./src/questions');
+const { menuPrompt, addEmployeePrompt, addDeptPrompt } = require('./src/questions');
 
+// Queries class contains all of the called SQL queries
 const sql = new Queries();
   
-// Runs mainMenu prompt and calls the corresponding function based on user choice
+// Runs the menu prompt and calls the corresponding function based on the user's choice
 async function mainMenu() {
     await inquirer.prompt(menuPrompt).then((answers) => {
         switch(answers.menuPrompt) {
             case 'View All Employees':
-                connection.promise().query(sql.viewAllEmployees)
-                    .then( ([rows, fields]) => {
-                        console.log('\n\n');
-                        console.table(rows);
-                        mainMenu();
-                    });
+                runViewQuery(sql.viewAllEmployees);
                 break;
             case 'Add Employee':
                 addEmployee();
                 break;
             case 'View All Roles':
-                connection.promise().query(sql.viewAllRoles)
-                    .then( ([rows, fields]) => {
-                        console.log('\n\n');
-                        console.table(rows);
-                        mainMenu();
-                    });
+                runViewQuery(sql.viewAllRoles);
                 break;
             case 'Add Role':
                 addRole();
@@ -36,12 +27,7 @@ async function mainMenu() {
                 updateEmployeeRole();
                 break;
             case 'View All Departments':
-                connection.promise().query(sql.viewAllDepartments)
-                    .then( ([rows, fields]) => {
-                        console.log('\n\n');
-                        console.table(rows);
-                        mainMenu();
-                    });
+                runViewQuery(sql.viewAllDepartments);
                 break;
             case 'Add Department':
                 addDepartment();
@@ -58,52 +44,78 @@ async function mainMenu() {
     });
 }
 
-async function addEmployee() {
-    await inquirer.prompt(addEmployeePrompt).then((answers) => {
-        const params = [ answers.first_name, answers.last_name, answers.role_id, answers.manager_id ];
-
-        connection.promise().query(sql.addEmployee, params, (err, result) => {
-            if (err) {
-                console.log(err);
-            }
-            console.log(result);
-        })
+// Function for running queries that will only print tables to the console and return to menu
+async function runViewQuery(query) {
+    connection.promise().query(query)
+    .then( ([rows, fields]) => {
+        console.log('\n\n');
+        console.table(rows);
         mainMenu();
     });
 }
 
-async function addRole() {
-    await inquirer.prompt(addRolePrompt).then((answers) => {
-        let title = answers.title;
-        let salary = answers.salary;
-        let department_id;
+// Prompts user for employee's name, role id, and manager id. Once answered, adds new employee to db
+async function addEmployee() {
+    await inquirer.prompt(addEmployeePrompt).then((answers) => {
+        const params = [ answers.first_name, answers.last_name, answers.role_id, answers.manager_id ];
 
-        switch (answers.department) {
-            case 'Sales':
-                department_id = 1;
-                break;
-            case 'Engineering':
-                department_id = 2;
-                break;
-            case 'IT':
-                department_id = 3;
-                break;
-            default:
-                department_id = 1;
-        }
-
-        const params = [ title, salary, department_id];
-
-        connection.promise().query(sql.addRole, params, (err, result) => {
+        connection.promise().query(sql.addEmployee, params, (err, results) => {
             if (err) {
                 console.log(err);
             }
-            console.log(result);
         });
         mainMenu();
     });
 }
 
+async function addRole() {
+    const departments = [];
+
+    // Run sql.getDepartments query to pull all department names and store into departments array
+    connection.promise().query(sql.getDepartments)
+    .then( ([rows, fields]) => {
+        rows.forEach(row => {
+            departments.push(row.name);
+        });
+    })
+
+    // Prompt for getting role info from user
+    await inquirer.prompt([
+        {
+            type: 'input',
+            message: 'What is the title of the role you would like to add?',
+            name: 'title',
+        },
+        {
+            type: 'input',
+            message: 'What is the role\'s salary?',
+            name: 'salary',
+        },
+        {
+            type: 'list',
+            message: 'What department does this role belong to?',
+            name: 'department',
+            choices: departments,
+        },
+    ])
+    .then((newRole) => {
+        // Find the corresponding id in the department table
+        const department_id = departments.findIndex(element => element == newRole.department) + 1;
+        const params = [ newRole.title, newRole.salary, department_id ];
+
+        // Run sql.addRole query to insert new role into role table
+        connection.promise().query(sql.addRole, params, (err, results) => {
+            if (err) {
+                console.log(err);
+            }
+        });
+
+        // Return to the main menu
+        mainMenu();
+    });
+}
+
+// Functionally similar to addEmployee. Prompts user for department name and inserts into corresponding table
 async function addDepartment() {
     await inquirer.prompt(addDeptPrompt).then((answers) => {
         const params = answers.name;
@@ -112,12 +124,16 @@ async function addDepartment() {
             if (err) {
                 console.log(err);
             }
-            console.log(result);
         });
         mainMenu();
     });
 }
 
+// This function first stores all employee names into an array so that they can be used in an
+// inquirer prompt as a 'list', allowing the user to select which employee to update by name.
+// Similarly, all roles are stored in an array, allowing the user to select which role to assign
+// the employee by role name.
+// Lastly, the function updates the employee's role_id in the db.
 async function updateEmployeeRole() {
     const names = [];
     const roles = [];
@@ -163,7 +179,6 @@ async function updateEmployeeRole() {
                             if (err) {
                                 console.log(err);
                             }
-                            console.log(result);
                         });
 
                         // Return to the main menu
