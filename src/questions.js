@@ -6,17 +6,11 @@ const menuPrompt = [
         choices: [
             'View All Employees',
             'Add Employee',
-            // 'Delete Employee',
             'View All Roles',
             'Add Role',
             'Update Employee Role',
-            // 'Delete Role',
             'View All Departments',
             'Add Department',
-            // 'Delete Department',
-            // 'Update Employees By Managers',
-            // 'View Employees By Manager',
-            // 'View Budget By Department',
             'Quit'
         ],
     },
@@ -45,55 +39,6 @@ const addEmployeePrompt = [
     },
 ];
 
-const addRolePrompt = [
-    {
-        type: 'input',
-        message: 'What is the title of the role you would like to add?',
-        name: 'title',
-    },
-    {
-        type: 'input',
-        message: 'What is the role\'s salary?',
-        name: 'salary',
-    },
-    {
-        type: 'list',
-        message: 'What department does this role belong to?',
-        name: 'department',
-        choices: [
-            'Sales',
-            'Engineering',
-            'IT'
-        ],
-    },
-];
-
-const updateRolePrompt1 = [
-    {
-        type: 'input',
-        message: 'What is the role id of the role you would like to update?',
-        name: 'id',
-    }
-];
-
-const updateRolePrompt2 = [
-    {
-        type: 'input',
-        message: 'Enter the new role title (press \'Enter\' if unchanged)',
-        name: 'title',
-    },
-    {
-        type: 'input',
-        message: 'Enter the new role salary (press \'Enter\' if unchanged)',
-        name: 'salary',
-    },
-    {
-        type: 'input',
-        message: 'Enter the new role department id (press \'Enter\' if unchanged)',
-        name: 'department_id',
-    },
-];
-
 const addDeptPrompt = [
     {
         type: 'input',
@@ -104,9 +49,6 @@ const addDeptPrompt = [
 
 module.exports = {
     menuPrompt,
-    addRolePrompt,
     addDeptPrompt,
-    addEmployeePrompt,
-    updateRolePrompt1,
-    updateRolePrompt2
+    addEmployeePrompt
 };
